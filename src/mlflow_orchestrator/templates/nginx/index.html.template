@@ -1,0 +1,13 @@
+<html>
+<title>
+MFLow Orchestrator - Overview
+</title>
+<body>
+<h2>Available instances:</h2>
+<ul>
+{% for instance in instances %}
+<li><a href="./{{ instance.name }}">{{ instance.name }}</a><br/></li>
+{% endfor %}
+</ul>
+</body>
+</html>
