@@ -1,7 +1,7 @@
 from mlflow_orchestrator.cli.base import BaseParser
 
 from argparse import ArgumentParser
-from logging import getLogger, Logger
+from logging import getLogger
 from pathlib import Path
 import signal
 import os
@@ -11,19 +11,34 @@ from mlflow_orchestrator.base import MLFlowOrchestrator
 
 logger = getLogger(__name__)
 
-ML_BASE_DIR=f"{os.environ['HOME']}/mlflow-orchestrator-workspace"
+ML_BASE_DIR = f"{os.environ['HOME']}/mlflow-orchestrator-workspace"
+
 
 class RunParser(BaseParser):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser=parser)
 
-        parser.add_argument("--base-dir", default=ML_BASE_DIR, type=str, help="top level folder where project subfolder are created")
-        parser.add_argument("-c", "--config-dir", default=None, type=str, help="Configuration directory")
-        parser.add_argument("--host-name", default=None, help="Host IP for the hosted instances")
-        parser.add_argument("--port-start-range", default=10000, type=int, help="Start of the port range used for hosted instances")
+        parser.add_argument(
+            "--base-dir",
+            default=ML_BASE_DIR,
+            type=str,
+            help="top level folder where project subfolder are created",
+        )
+        parser.add_argument(
+            "-c", "--config-dir", default=None, type=str, help="Configuration directory"
+        )
+        parser.add_argument(
+            "--host-name", default=None, help="Host IP for the hosted instances"
+        )
+        parser.add_argument(
+            "--port-start-range",
+            default=10000,
+            type=int,
+            help="Start of the port range used for hosted instances",
+        )
 
     def get_ip(self):
-        for t in [('8.8.8.8', 1253)]:
+        for t in [("8.8.8.8", 1253)]:
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 s.connect(t)
@@ -33,10 +48,9 @@ class RunParser(BaseParser):
             except Exception as e:
                 logger.warning(e)
 
-        
     def execute(self, args):
         super().execute(args)
-    
+
         base_dir = Path(args.base_dir)
         if args.config_dir is None:
             config_dir = base_dir / "conf.d"
@@ -48,17 +62,18 @@ class RunParser(BaseParser):
             host_name = self.get_ip()
 
         orchestrator = MLFlowOrchestrator(
-                config_dir=config_dir,
-                base_dir=base_dir,
-                host_name=host_name,
+            config_dir=config_dir,
+            base_dir=base_dir,
+            host_name=host_name,
         )
 
         orchestrator.generate_nginx_instance_conf(
-                port_start_range=args.port_start_range
+            port_start_range=args.port_start_range
         )
 
         def signal_handler(sig, frame):
             orchestrator.terminate()
+
         signal.signal(signal.SIGINT, signal_handler)
 
         try:
