@@ -1,4 +1,7 @@
     location ^~ /{{ name }}/api/ {
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST';
+
         proxy_pass       http://{{ host_name }}:{{ port }}/api/;
 
         proxy_set_header Host $http_host;
@@ -12,6 +15,9 @@
 
 
     location ^~ /{{ name }} {
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Methods' 'GET, POST';
+
         proxy_pass       http://{{ host_name }}:{{ port }}/{{ name }};
 
         rewrite ^/{{ name }}/static-files/static/media/home-logo.*.png  https://img.shields.io/badge/{{ badge }} break;
