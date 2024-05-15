@@ -12,7 +12,7 @@ from mlflow_orchestrator.base import MLFlowOrchestrator
 logger = getLogger(__name__)
 
 ML_BASE_DIR = f"{os.environ['HOME']}/mlflow-orchestrator-workspace"
-
+ML_CONFIG_DIR = "conf.d"
 
 class RunParser(BaseParser):
     def __init__(self, parser: ArgumentParser):
@@ -22,10 +22,10 @@ class RunParser(BaseParser):
             "--base-dir",
             default=ML_BASE_DIR,
             type=str,
-            help="top level folder where project subfolder are created",
+            help=f"top level folder where project subfolder are created (default: {ML_BASE_DIR})",
         )
         parser.add_argument(
-            "-c", "--config-dir", default=None, type=str, help="Configuration directory"
+            "-c", "--config-dir", default=None, type=str, help=f"Configuration directory (default: {ML_CONFIG_DIR} in base-dir)"
         )
         parser.add_argument(
             "--host-name", default=None, help="Host IP for the hosted instances"
@@ -34,7 +34,7 @@ class RunParser(BaseParser):
             "--port-start-range",
             default=10000,
             type=int,
-            help="Start of the port range used for hosted instances",
+            help="Start of the port range used for hosted instances (default: 10000)",
         )
 
     def get_ip(self):
@@ -53,7 +53,7 @@ class RunParser(BaseParser):
 
         base_dir = Path(args.base_dir)
         if args.config_dir is None:
-            config_dir = base_dir / "conf.d"
+            config_dir = base_dir / ML_CONFIG_DIR
         else:
             config_dir = Path(args.config_dir)
 
