@@ -30,6 +30,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "importlib-resources",
     "mlflow",
     "pydantic",
     "pydantic-settings",
