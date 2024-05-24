@@ -14,6 +14,7 @@ logger = getLogger(__name__)
 ML_BASE_DIR = f"{os.environ['HOME']}/mlflow-orchestrator-workspace"
 ML_CONFIG_DIR = "conf.d"
 
+
 class RunParser(BaseParser):
     def __init__(self, parser: ArgumentParser):
         super().__init__(parser=parser)
@@ -22,10 +23,15 @@ class RunParser(BaseParser):
             "--base-dir",
             default=ML_BASE_DIR,
             type=str,
-            help=f"top level folder where project subfolder are created (default: {ML_BASE_DIR})",
+            help=f"top level folder where project subfolder are created"
+            f"(default: {ML_BASE_DIR})",
         )
         parser.add_argument(
-            "-c", "--config-dir", default=None, type=str, help=f"Configuration directory (default: {ML_CONFIG_DIR} in base-dir)"
+            "-c",
+            "--config-dir",
+            default=None,
+            type=str,
+            help=f"Configuration directory (default: {ML_CONFIG_DIR} in base-dir)",
         )
         parser.add_argument(
             "--host-name", default=None, help="Host IP for the hosted instances"
@@ -38,6 +44,9 @@ class RunParser(BaseParser):
         )
 
     def get_ip(self):
+        """
+        Identify current systems IP address by connection to a typically available dns server
+        """
         for t in [("8.8.8.8", 1253)]:
             try:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -65,10 +74,7 @@ class RunParser(BaseParser):
             config_dir=config_dir,
             base_dir=base_dir,
             host_name=host_name,
-        )
-
-        orchestrator.generate_nginx_instance_conf(
-            port_start_range=args.port_start_range
+            port_start_range=args.port_start_range,
         )
 
         def signal_handler(sig, frame):
@@ -78,7 +84,6 @@ class RunParser(BaseParser):
 
         try:
             orchestrator.run()
-            orchestrator.wait_for_running()
         except Exception as e:
             logger.error(e)
         finally:

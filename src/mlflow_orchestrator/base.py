@@ -9,6 +9,7 @@ import subprocess
 import os
 import sys
 import time
+from threading import Thread
 
 import importlib
 
@@ -29,8 +30,18 @@ logger.setLevel(logging.INFO)
 class MLFlowOrchestrator:
     _instances: dict[str, MLFlowInstance]
     base_dir: Path
+    config_dir: Path
+    port_start_range: int
 
-    def __init__(self, config_dir: str | Path, base_dir: str | Path, host_name: str):
+    _stop: bool = False
+
+    def __init__(
+        self,
+        config_dir: str | Path,
+        base_dir: str | Path,
+        host_name: str,
+        port_start_range: int = 10000,
+    ):
         config_dir = Path(config_dir)
         if not config_dir.exists() or not list(config_dir.glob("*.yaml")):
             logger.info("conf.d dir does not exist: creating default")
@@ -38,9 +49,11 @@ class MLFlowOrchestrator:
             with open(config_dir / "default.yaml", "w") as f:
                 f.write("name: default")
 
-        self._instances = self.load_confd(config_dir)
+        self._instances = {}
+        self.config_dir = config_dir
         self.base_dir = Path(base_dir)
         self.host_name = host_name
+        self.port_start_range = port_start_range
 
     @property
     def log_dir(self) -> Path:
@@ -50,7 +63,6 @@ class MLFlowOrchestrator:
 
     def start_instance(self, name: str):
         instance = self._instances[name]
-        instance.prepare(hostname=self.host_name)
 
         logfile_name = self.log_dir / f"{instance.name}.log"
         logfile = open(logfile_name, "w+")
@@ -113,38 +125,83 @@ class MLFlowOrchestrator:
 
         self.register(name, process)
 
+    def stop_instance(self, name):
+        if name not in self._instances:
+            raise ValueError(f"MLFlowOrchestrator: instance '{name}' is not known")
+
+        if self.get_instance_status(name=name) == MLFlowInstance.Status.STOPPED:
+            logger.debug("MLFlowOrchestrator instance '{name}' - already stopped")
+            return
+
+        logger.info(f"MLFlowOrchestrator instance '{name}' - stopping")
+        self._instances[name].stop()
+
+    def get_instance_status(self, name: str) -> MLFlowInstance.Status:
+        if name not in self._instances:
+            raise ValueError(f"MLFlowOrchestrator: instance '{name}' is not known")
+
+        instance = self._instances[name]
+        if instance.process is not None:
+            if instance.process.poll() is None:
+                return MLFlowInstance.Status.RUNNING
+
+        return MLFlowInstance.Status.STOPPED
+
     def register(self, name: str, process):
         self._instances[name].process = process
 
-    def run(self):
-        [self.start_instance(name=k) for k in self._instances]
-
-    def wait_for_running(self, delay_in_s: int = 1, show: bool = True):
+    def run_fn(self, delay_in_s: int):
         txt = []
-        while True:
+        start = None
+
+        while not self._stop:
+            if start is not None:
+                if (time.time() - start) < delay_in_s:
+                    time.sleep(1.0)
+                    continue
+
+            self._instances = self.reload_confd(self.config_dir)
+            self.generate_nginx_instance_conf()
+
             running_instances = []
             if txt:
                 print(f"\033[{len(txt)}A", end="")
 
-            txt = ["\nActive instances:"]
+            txt = ["\nAvailable instances:"]
             for name, instance in self._instances.items():
+                if not instance.enable:
+                    if (
+                        self.get_instance_status(name=name)
+                        == MLFlowInstance.Status.RUNNING
+                    ):
+                        self.stop_instance(name)
+                    txt.append(f"    {instance.name} - disabled")
+                    continue
+
+                # Dynamically start or stop instances
+                if self.get_instance_status(name=name) != MLFlowInstance.Status.RUNNING:
+                    self.start_instance(name)
+
                 if instance.process.poll() is None:
                     txt.append(f"    {instance.name} - listening on: {instance.port}")
                     running_instances.append(instance.name)
-            txt.append("Press CTRL+C to stop all running")
+            txt.append("Press CTRL+C to stop all running instances")
             sys.stdout.write("\n".join(txt))
-            if not running_instances:
-                break
 
-            time.sleep(delay_in_s)
+            start = time.time()
+
+    def run(self, delay_in_s: int = 10):
+        t = Thread(target=self.run_fn, args=(delay_in_s,))
+        t.start()
+        t.join()
+
+        # Ensure all instance are stopped when exiting
+        [self.stop_instance(name) for name in self._instances]
 
     def terminate(self):
-        logger.info("Shutting down ...")
-        [instance.process.terminate() for _, instance in self._instances.items()]
+        self._stop = True
 
-    def generate_nginx_instance_conf(
-        self, template_path: Path = None, port_start_range: int = 10000
-    ):
+    def generate_nginx_instance_conf(self, template_path: Path = None):
         if template_path is None:
             template_path = (
                 importlib.resources.files("mlflow_orchestrator").joinpath("templates")
@@ -167,7 +224,7 @@ class MLFlowOrchestrator:
                 if data is not None:
                     port_mapping = data
 
-        port_mapping["__default__"] = port_start_range
+        port_mapping["__default__"] = self.port_start_range
 
         instances = []
         for name, instance in self._instances.items():
@@ -201,13 +258,47 @@ class MLFlowOrchestrator:
         with open(port_mapping_yaml, "w") as f:
             yaml.dump(port_mapping, f)
 
-    @staticmethod
-    def load_confd(directory: str | Path) -> dict[str, MLFlowInstance]:
+    def load_confd(self, directory: str | Path) -> dict[str, MLFlowInstance]:
+        """
+        Load all instance from a configuration file
+        """
         filenames = sorted(Path(directory).glob("*.yaml"))
 
         instances = {}
         for file in filenames:
-            instance = MLFlowInstance.from_yaml(file)
-            instances[instance.name] = instance
+            try:
+                instance = MLFlowInstance.from_yaml(file)
+                instance.prepare(hostname=self.host_name)
+
+                instances[instance.name] = instance
+
+            except Exception as e:
+                logger.warn(f"Loading configuration '{file}' failed -- {e}")
 
         return instances
+
+    def reload_confd(self, directory: str | Path) -> dict[str, MLFlowInstance]:
+        """
+        Reloading instance configurations
+        """
+        instances = self.load_confd(directory=directory)
+        updated_instances = {}
+        for name, instance in instances.items():
+            # Check if we find already running instances
+            if name in self._instances:
+                existing_instance = self._instances[name]
+
+                # Runtime values
+                instance.process = existing_instance.process
+                if instance.port is None:
+                    instance.port = existing_instance.port
+
+                changes = existing_instance.collect_changes(instance)
+                if changes:
+                    logger.info(
+                        f"MLFlowOrchestrator instance '{name}':"
+                        f"configuration changed: {changes}"
+                    )
+
+            updated_instances[name] = instance
+        return updated_instances

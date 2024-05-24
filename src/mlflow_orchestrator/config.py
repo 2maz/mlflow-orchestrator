@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from enum import Enum
 from pathlib import Path
 import yaml
 import subprocess
+import psutil
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings
 
@@ -39,6 +41,13 @@ class MLFlowArtifacts(BaseModel):
 
 
 class MLFlowInstance(BaseSettings):
+    """
+    An MLFlowInstance configuration
+    """
+    class Status(Enum):
+        STOPPED = 0
+        RUNNING = 1
+
     class Config:
         arbitrary_types_allowed = True
 
@@ -57,6 +66,17 @@ class MLFlowInstance(BaseSettings):
     # Runtime management only
     process: subprocess.CompletedProcess | None = None
 
+    # Whether this instance should be started (default False)
+    enable: bool = False
+
+    def collect_changes(self, other: MLFlowInstance):
+        changes = {}
+        for k, v in self.__dict__.items():
+            if other.__dict__[k] != v:
+                changes[k] = {"from": v, "to": other.__dict__[k]}
+
+        return changes
+
     @classmethod
     def from_yaml(cls, filename: str | Path) -> MLFlowInstance:
         with open(filename, "r") as f:
@@ -64,6 +84,13 @@ class MLFlowInstance(BaseSettings):
             return cls(**data)
 
     def prepare(self, hostname):
+        """
+        Prepare environment and storage setups
+
+        Replaces 'hostname' with current ip and
+        validates setup as s3 buckets if configured
+
+        """
         for k, v in dict(self.environment).items():
             if v is not None:
                 if type(v) == str and v.startswith("http"):
@@ -74,9 +101,38 @@ class MLFlowInstance(BaseSettings):
         ):
             self.ensure_s3_bucket()
 
+    def stop(self, timeout: int | None = 20, on_terminate: any = None):
+        """
+        Ensure that all processes associated with this instance will be terminated
+        """
+        if self.process is None:
+            return
+
+        # https://psutil.readthedocs.io/en/latest/#kill-process-tree
+        parent_process = psutil.Process(self.process.pid)
+        processes = parent_process.children(recursive=True)
+        processes.append(parent_process)
+
+        for p in processes:
+            try:
+                p.terminate()
+            except psutil.NoSuchProcess:
+                pass
+
+        gone, alive = psutil.wait_procs(
+            processes, timeout=timeout, callback=on_terminate
+        )
+        for p in alive:
+            p.kill()
+
     def ensure_s3_bucket(self, name: str | None = None, region: str = "eu-north-1"):
+        """
+        Ensure that an s3 bucket with the given name exists
+
+        MLFLOW_S3_ENDPOINT_URL needs to be defined in the environment.
+        """
         if self.environment.MLFLOW_S3_ENDPOINT_URL is None:
-            raise ValueError("MLFlowInstance: no known S3 endpoint")
+            raise ValueError(f"MLFlowInstance '{self.name}': no known S3 endpoint")
 
         if name is None:
             # Get desired name or use default name
@@ -96,10 +152,10 @@ class MLFlowInstance(BaseSettings):
         response = s3_client.list_buckets()
         for bucket in response["Buckets"]:
             if bucket["Name"] == name:
-                logger.info(f"Bucket '{name}' already exists")
+                logger.debug(f"Bucket '{name}' already exists")
                 return
 
-        logger.info(f"Create bucket '{name}'")
+        logger.info(f"MLFlowInstance '{self.name}' - create bucket '{name}'")
         location = {"LocationConstraint": region}
         s3_client.create_bucket(Bucket=name, CreateBucketConfiguration=location)
 
