@@ -6,12 +6,18 @@ services:
     volumes:
       -  ./nginx-default.conf.template:/etc/nginx/templates/default.conf.template
       - ./nginx/mlflow-instances:/etc/nginx/mlflow-instances
+    command:
+      - /bin/sh
+      - -c
+      - |
+        /etc/nginx/mlflow-instances/monitor.sh &
+        /docker-entrypoint.sh nginx -g 'daemon off;'
     ports:
       - 8888:8888
 {%- if not use_minio %}
       - 9000:9000
       - 9001:9001
-{% endif %}
+{%- endif %}
 {%- endif %}
 {%- if use_minio %}
   minio:

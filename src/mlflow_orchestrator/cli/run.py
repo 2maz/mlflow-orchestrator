@@ -45,7 +45,8 @@ class RunParser(BaseParser):
 
     def get_ip(self):
         """
-        Identify current systems IP address by connection to a typically available dns server
+        Identify current systems IP address by connection to a typically available
+        dns server.
         """
         for t in [("8.8.8.8", 1253)]:
             try:

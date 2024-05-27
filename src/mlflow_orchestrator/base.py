@@ -167,8 +167,10 @@ class MLFlowOrchestrator:
             if txt:
                 print(f"\033[{len(txt)}A", end="")
 
-            txt = ["\nAvailable instances:"]
-            for name, instance in self._instances.items():
+            txt = ["\nMLFlow Instances:"]
+            for name in sorted(self._instances.keys()):
+                instance = self._instances[name]
+
                 if not instance.enable:
                     if (
                         self.get_instance_status(name=name)
@@ -226,16 +228,22 @@ class MLFlowOrchestrator:
 
         port_mapping["__default__"] = self.port_start_range
 
+        # List existing config files to identify unneeded ones
+        residual_config_files = list(output_dir.glob("*.conf"))
+
         instances = []
         for name, instance in self._instances.items():
             filename = output_dir / f"{name}.conf"
+            if filename in residual_config_files:
+                residual_config_files.remove(filename)
+
             if instance.name in port_mapping:
                 instance.port = port_mapping[instance.name]
             else:
                 instance.port = max(port_mapping.values()) + 1
                 port_mapping[instance.name] = instance.port
 
-            instances.append({"name": instance.name})
+            instances.append({"name": instance.name, "enable": instance.enable})
 
             with open(filename, "w") as f:
                 content = mlflow_instance_template.render(
@@ -243,16 +251,35 @@ class MLFlowOrchestrator:
                     name=instance.name,
                     port=instance.port,
                     badge=f"{instance.badge_prefix}-{instance.name.replace('-','_')}-{instance.badge_color}",
+                    allow_cors_origin="*",
                 )
                 f.write(content)
 
+        # Cleanup old config files
+        for config_file in residual_config_files:
+            logger.info(
+                "MLFlowOrchestrator: obsolete nginx configuration file detected."
+                f"Removing: {config_file}"
+            )
+            config_file.unlink()
+
+        # Write out index.html file
         (output_dir / "www").mkdir(parents=True, exist_ok=True)
         index_html_template = environment.get_template("index.html.template")
 
+        instances = sorted(instances, key=lambda x: x["name"])
         index_html_content = index_html_template.render(instances=instances)
         index_html_filename = output_dir / "www" / "index.html"
         with open(index_html_filename, "w") as f:
             f.write(index_html_content)
+
+        # Write out monitor.sh file - in order to dynamically reload nginx if
+        # configuration changes
+        monitor_sh_template = environment.get_template("monitor.sh.template")
+        monitor_sh_content = monitor_sh_template.render()
+        with open(output_dir / "monitor.sh", "w") as f:
+            f.write(monitor_sh_content)
+
 
         # write port_mapping
         with open(port_mapping_yaml, "w") as f:

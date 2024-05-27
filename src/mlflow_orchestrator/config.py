@@ -44,6 +44,7 @@ class MLFlowInstance(BaseSettings):
     """
     An MLFlowInstance configuration
     """
+
     class Status(Enum):
         STOPPED = 0
         RUNNING = 1

@@ -1,5 +1,7 @@
+# This is an automatically generated file from template: {{__file__}} . Do not manually change.
+
     location ^~ /{{ name }}/api/ {
-        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Origin' '{{allow_cors_origin}}';
         add_header 'Access-Control-Allow-Methods' 'GET, POST';
 
         proxy_pass       http://{{ host_name }}:{{ port }}/api/;
@@ -15,11 +17,12 @@
 
 
     location ^~ /{{ name }} {
-        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Origin' '{{allow_cors_origin}}';
         add_header 'Access-Control-Allow-Methods' 'GET, POST';
 
         proxy_pass       http://{{ host_name }}:{{ port }}/{{ name }};
 
+	# Instead of the mlflow-logo in the top-left, show a customized badge to distinguish instances
         rewrite ^/{{ name }}/static-files/static/media/home-logo.*.png  https://img.shields.io/badge/{{ badge }} break;
 
         proxy_set_header Host $http_host;

@@ -1,0 +1,29 @@
+#/!/bin/sh
+
+SCRIPT_DIR=$(dirname $0)
+
+check_for_change() {
+    # Check if the checksum of the file content changes for this directory
+    CURRENT_CHECKSUM=`find $SCRIPT_DIR -type f -not -path '*/.*' -exec md5sum {} + | LC_ALL=C sort | md5sum | cut -d' ' -f1`
+    CHANGE_DETECTED=0
+    if [ -e $SCRIPT_DIR/.checksum ]; then
+        . $SCRIPT_DIR/.checksum
+        if [ "$CHECKSUM" != "$CURRENT_CHECKSUM" ]; then
+            echo "export CHECKSUM=$CURRENT_CHECKSUM" > $SCRIPT_DIR/.checksum
+            CHANGE_DETECTED=1
+        fi
+    else
+        echo "export CHECKSUM=$CURRENT_CHECKSUM" > $SCRIPT_DIR/.checksum
+    fi
+    echo $CHANGE_DETECTED
+}
+
+while true; do
+   if [ $(check_for_change) -gt 0 ]; then
+      echo "Nginx configuration change detected - triggering reload"
+      nginx -s reload
+   fi
+   sleep 5
+done
+
+
