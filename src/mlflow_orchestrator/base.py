@@ -231,7 +231,7 @@ class MLFlowOrchestrator:
         # List existing config files to identify unneeded ones
         residual_config_files = list(output_dir.glob("*.conf"))
 
-        instances = []
+        instance_groups = {}
         for name, instance in self._instances.items():
             filename = output_dir / f"{name}.conf"
             if filename in residual_config_files:
@@ -243,7 +243,10 @@ class MLFlowOrchestrator:
                 instance.port = max(port_mapping.values()) + 1
                 port_mapping[instance.name] = instance.port
 
-            instances.append({"name": instance.name, "enable": instance.enable})
+            if instance.badge_prefix not in instance_groups:
+                instance_groups[instance.badge_prefix] = [{"name": instance.name, "enable": instance.enable}]
+            else:
+                instance_groups[instance.badge_prefix].append({"name": instance.name, "enable": instance.enable})
 
             with open(filename, "w") as f:
                 content = mlflow_instance_template.render(
@@ -267,8 +270,11 @@ class MLFlowOrchestrator:
         (output_dir / "www").mkdir(parents=True, exist_ok=True)
         index_html_template = environment.get_template("index.html.template")
 
-        instances = sorted(instances, key=lambda x: x["name"])
-        index_html_content = index_html_template.render(instances=instances)
+        sorted_instance_groups = {}
+        for k,v in instance_groups.items():
+            sorted_instance_groups[k] = sorted(v, key=lambda x: x["name"])
+
+        index_html_content = index_html_template.render(instance_groups=sorted_instance_groups, group_labels=sorted(sorted_instance_groups.keys()))
         index_html_filename = output_dir / "www" / "index.html"
         with open(index_html_filename, "w") as f:
             f.write(index_html_content)

@@ -10,12 +10,18 @@ MFLow Orchestrator - Overview
 <body>
 <h2>Available MLFlow Instances:</h2>
 <ul classname="list-group">
-{% for instance in instances %}
+{% for group in group_labels %}
+<div id={{group}}>
+<h4>Group: {{group}}</h4>
+{% for instance in instance_groups[group] %}
 {% if instance.enable %}
 <li classname="list-item"><a href="./{{ instance.name }}">{{ instance.name }}</a><br/></li>
 {% else %}
 <li classname="list-item">{{ instance.name }} [disabled]<br/></li>
 {% endif %}
+{% endfor %}
+<br/>
+</div>
 {% endfor %}
 </ul>
 </body>
