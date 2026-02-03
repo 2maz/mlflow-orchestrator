@@ -24,11 +24,12 @@
 
         proxy_pass       http://{{ host_name }}:{{ port }}/{{ name }};
 
-	# Instead of the mlflow-logo in the top-left, show a customized badge to distinguish instances
-        rewrite ^/{{ name }}/static-files/static/media/home-logo.*.png  https://img.shields.io/badge/{{ badge }} break;
 
         proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Inject the logo snippet before the body of the proxied response
+        add_before_body /badge-{{ name }}.html;
     }

@@ -94,7 +94,7 @@ class MLFlowInstance(BaseSettings):
         """
         for k, v in dict(self.environment).items():
             if v is not None:
-                if type(v) == str and v.startswith("http"):
+                if type(v) is str and v.startswith("http"):
                     setattr(self.environment, str(k), v.replace("hostname", hostname))
 
         if self.artifacts.destination and self.artifacts.destination.startswith(

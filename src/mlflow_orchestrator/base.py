@@ -74,10 +74,14 @@ class MLFlowOrchestrator:
             str(instance.port),
             "--host",
             "0.0.0.0",
+            "--allowed-hosts",
+            "*",
+            "--cors-allowed-origins",
+            "*",
             "--static-prefix",
             f"/{instance.name}",
             "--backend-store-uri",
-            f"file://{self.base_dir}/mlflow-data/{instance.name}/mlruns",
+            f"sqlite://{self.base_dir}/mlflow-data/{instance.name}/mlruns.db",
         ]
         env = os.environ.copy()
 
@@ -112,7 +116,7 @@ class MLFlowOrchestrator:
 
         for k, v in dict(instance.environment).items():
             if v is not None:
-                if type(v) == bool:
+                if type(v) is bool:
                     v = str(v).lower()
 
                 env[k] = v
@@ -231,6 +235,9 @@ class MLFlowOrchestrator:
         # List existing config files to identify unneeded ones
         residual_config_files = list(output_dir.glob("*.conf"))
 
+        # output dir for www static content such and index, and badge
+        (output_dir / "www").mkdir(parents=True, exist_ok=True)
+
         instance_groups = {}
         for name, instance in self._instances.items():
             filename = output_dir / f"{name}.conf"
@@ -244,19 +251,34 @@ class MLFlowOrchestrator:
                 port_mapping[instance.name] = instance.port
 
             if instance.badge_prefix not in instance_groups:
-                instance_groups[instance.badge_prefix] = [{"name": instance.name, "enable": instance.enable}]
+                instance_groups[instance.badge_prefix] = [
+                    {"name": instance.name, "enable": instance.enable}
+                ]
             else:
-                instance_groups[instance.badge_prefix].append({"name": instance.name, "enable": instance.enable})
+                instance_groups[instance.badge_prefix].append(
+                    {"name": instance.name, "enable": instance.enable}
+                )
 
+            badge = f"{instance.badge_prefix}-{instance.name.replace('-','_')}-{instance.badge_color}"
             with open(filename, "w") as f:
                 content = mlflow_instance_template.render(
                     host_name=self.host_name,
                     name=instance.name,
                     port=instance.port,
-                    badge=f"{instance.badge_prefix}-{instance.name.replace('-','_')}-{instance.badge_color}",
+                    badge=badge,
                     allow_cors_origin="*",
                 )
                 f.write(content)
+
+            # Write out index.html file
+            badge_html_filename = output_dir / "www" / f"badge-{instance.name}.html"
+            with open(badge_html_filename, "w") as f:
+                badge_html_template = environment.get_template("badge.html.template")
+                badge_html_content = badge_html_template.render(
+                    badge=badge,
+                    tooltip=f"{instance.badge_prefix}-{instance.name.replace('-','_')}",
+                )
+                f.write(badge_html_content)
 
         # Cleanup old config files
         for config_file in residual_config_files:
@@ -267,14 +289,16 @@ class MLFlowOrchestrator:
             config_file.unlink()
 
         # Write out index.html file
-        (output_dir / "www").mkdir(parents=True, exist_ok=True)
         index_html_template = environment.get_template("index.html.template")
 
         sorted_instance_groups = {}
-        for k,v in instance_groups.items():
+        for k, v in instance_groups.items():
             sorted_instance_groups[k] = sorted(v, key=lambda x: x["name"])
 
-        index_html_content = index_html_template.render(instance_groups=sorted_instance_groups, group_labels=sorted(sorted_instance_groups.keys()))
+        index_html_content = index_html_template.render(
+            instance_groups=sorted_instance_groups,
+            group_labels=sorted(sorted_instance_groups.keys()),
+        )
         index_html_filename = output_dir / "www" / "index.html"
         with open(index_html_filename, "w") as f:
             f.write(index_html_content)
@@ -285,7 +309,6 @@ class MLFlowOrchestrator:
         monitor_sh_content = monitor_sh_template.render()
         with open(output_dir / "monitor.sh", "w") as f:
             f.write(monitor_sh_content)
-
 
         # write port_mapping
         with open(port_mapping_yaml, "w") as f:

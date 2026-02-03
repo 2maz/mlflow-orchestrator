@@ -32,6 +32,7 @@ classifiers = [
 dependencies = [
     "importlib-resources",
     "mlflow",
+    "psutil",
     "pydantic",
     "pydantic-settings",
     "minio",
@@ -66,8 +67,9 @@ mlflow-orchestrator = "mlflow_orchestrator.cli.main:run"
 [tool.mypy]
 ignore_missing_imports = true
 
-[tools.setuptools]
-package-dir = "src"
+[tool.setuptools.package-data]
+"mlflow_orchestrator" = [ "templates/**/*" ]
+
 
 # Disable to be able to debug in IDE
 #[tool.pytest.ini_options]
