@@ -10,6 +10,7 @@ import os
 import sys
 import time
 from threading import Thread
+import uuid
 
 import importlib
 
@@ -106,6 +107,7 @@ class MLFlowOrchestrator:
                     for k, v in auth_config.items():
                         f.write(f"{k} = {v}\n")
 
+                env["MLFLOW_FLASK_SERVER_SECRET_KEY"] = f"{instance.name}:{uuid.uuid4()}"
                 env["MLFLOW_AUTH_CONFIG_PATH"] = auth_config_ini
 
         if instance.artifacts is not None:
