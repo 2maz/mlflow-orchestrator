@@ -82,7 +82,7 @@ class MLFlowOrchestrator:
             "--static-prefix",
             f"/{instance.name}",
             "--backend-store-uri",
-            f"sqlite://{self.base_dir}/mlflow-data/{instance.name}/mlruns.db",
+            f"sqlite:///{self.base_dir}/mlflow-data/{instance.name}/mlruns.db",
         ]
         env = os.environ.copy()
 
