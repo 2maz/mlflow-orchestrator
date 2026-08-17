@@ -74,7 +74,7 @@ class MLFlowOrchestrator:
             "--port",
             str(instance.port),
             "--host",
-            "0.0.0.0",
+            str(instance.host_name),
             "--allowed-hosts",
             "*",
             "--cors-allowed-origins",
@@ -191,7 +191,7 @@ class MLFlowOrchestrator:
                     self.start_instance(name)
 
                 if instance.process.poll() is None:
-                    txt.append(f"    {instance.name} - listening on: {instance.port}")
+                    txt.append(f"    {instance.name} - listening on: http://{instance.host_name}:{instance.port}/{instance.name}")
                     running_instances.append(instance.name)
             txt.append("Press CTRL+C to stop all running instances")
             sys.stdout.write("\n".join(txt))
