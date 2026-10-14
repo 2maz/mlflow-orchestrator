@@ -61,7 +61,7 @@ class RunParser(BaseParser):
     def execute(self, args):
         super().execute(args)
 
-        base_dir = Path(args.base_dir)
+        base_dir = Path(args.base_dir).resolve()
         if args.config_dir is None:
             config_dir = base_dir / ML_CONFIG_DIR
         else:
