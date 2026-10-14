@@ -1,28 +1,308 @@
 <!-- This is an automatically generated file. Do not manually change -->
-<html>
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
 <head>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-</head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MLflow Orchestrator - Overview</title>
 
-<title>
-MFLow Orchestrator - Overview
-</title>
+  <!-- Bootstrap 5 & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    min-height: 100vh;
+  }
+
+  /* Glassmorphism Navigation Navbar */
+  .navbar-glass {
+    background: rgba(var(--bs-body-bg-rgb), 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+  }
+
+  /* Stat Cards */
+  .stat-card {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    color: var(--bs-body-color);
+  }
+  .stat-card:hover {
+    border-color: var(--bs-primary);
+  }
+
+  /* Group Cards */
+  .group-card {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  [data-bs-theme="dark"] .group-card {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  }
+  .group-header {
+    background: var(--bs-tertiary-bg);
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--bs-body-color);
+  }
+
+  /* Instance Item Rows */
+  .instance-item {
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--bs-border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.15s ease-in-out;
+    text-decoration: none;
+    color: var(--bs-body-color);
+  }
+  .instance-item:last-child {
+    border-bottom: none;
+  }
+  a.instance-item:hover {
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-primary);
+  }
+  .instance-item.disabled {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-secondary-color);
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  /* Input Search Styling */
+  .search-input {
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+    border-radius: 8px;
+  }
+  .search-input::placeholder {
+    color: var(--bs-secondary-color);
+  }
+  .search-input:focus {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-primary);
+    color: var(--bs-body-color);
+    box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15);
+  }
+
+  /* Custom Badges & Icons */
+  .brand-icon {
+    background: linear-gradient(135deg, #0072C6, #00C7FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .badge-enabled {
+    background-color: rgba(25, 135, 84, 0.15);
+    color: var(--bs-success);
+    border: 1px solid rgba(25, 135, 84, 0.3);
+  }
+  .badge-disabled {
+    background-color: rgba(108, 117, 125, 0.15);
+    color: var(--bs-secondary-color);
+    border: 1px solid rgba(108, 117, 125, 0.3);
+  }
+  </style>
+
+</head>
 <body>
-<h2>Available MLFlow Instances:</h2>
-<ul classname="list-group">
-{% for group in group_labels %}
-<div id={{group}}>
-<h4>Group: {{group}}</h4>
-{% for instance in instance_groups[group] %}
-{% if instance.enable %}
-<li classname="list-item"><a href="./{{ instance.name }}">{{ instance.name }}</a><br/></li>
-{% else %}
-<li classname="list-item">{{ instance.name }} [disabled]<br/></li>
-{% endif %}
-{% endfor %}
-<br/>
-</div>
-{% endfor %}
-</ul>
+
+  <!-- Top Sticky Navigation -->
+  <nav class="navbar sticky-top navbar-expand-lg navbar-light navbar-glass py-2 mb-4">
+    <div class="container-xl">
+      <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#">
+        <i class="bi bi-diagram-3-fill fs-4 brand-icon"></i>
+        <span>MLflow Orchestrator</span>
+      </a>
+      <div class="d-flex align-items-center gap-3">
+        <span class="badge bg-light border border-secondary text-secondary d-none d-md-inline-block">
+          <i class="bi bi-hdd-stack me-1"></i> Dashboard Overview
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container-xl pb-5">
+
+    <!-- Header & Live Search Bar -->
+    <div class="row align-items-center mb-4 gy-3">
+      <div class="col-md-6">
+        <h2 class="fw-bold mb-1 text-body">Available MLflow Instances</h2>
+        <p class="text-secondary mb-0 small">Select an active environment to view metrics, artifacts, and runs.</p>
+      </div>
+      <div class="col-md-6">
+        <div class="input-group">
+          <span class="input-group-text search-input border-end-0 text-secondary">
+            <i class="bi bi-search"></i>
+          </span>
+          <input type="text" id="instanceSearch" class="form-control search-input border-start-0 ps-0" placeholder="Filter instances or groups...">
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Summary Row -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-4">
+        <div class="stat-card p-3 d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-medium">Total Groups</div>
+            <div class="fs-4 fw-bold text-body mb-0" id="stat-total-groups">{{ group_labels|length }}</div>
+          </div>
+          <div class="fs-2 text-primary opacity-50"><i class="bi bi-folder2-open"></i></div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="stat-card p-3 d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-medium">Active Instances</div>
+            <div class="fs-4 fw-bold text-success mb-0" id="stat-active-instances">0</div>
+          </div>
+          <div class="fs-2 text-success opacity-50"><i class="bi bi-check-circle"></i></div>
+        </div>
+      </div>
+      <div class="col-sm-4">
+        <div class="stat-card p-3 d-flex align-items-center justify-content-between">
+          <div>
+            <div class="text-secondary small fw-medium">Disabled Instances</div>
+            <div class="fs-4 fw-bold text-secondary mb-0" id="stat-disabled-instances">0</div>
+          </div>
+          <div class="fs-2 text-secondary opacity-50"><i class="bi bi-slash-circle"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instance Groups List -->
+    <div class="list-group list-unstyled" id="groups-container">
+    {% for group in group_labels %}
+      <div id="{{ group }}" class="group-card group-block">
+        <div class="group-header">
+          <h5 class="mb-0 fw-bold text-body d-flex align-items-center gap-2">
+            <i class="bi bi-folder-fill text-primary"></i>
+            <span>{{ group }}(s)</span>
+          </h5>
+          <span class="badge bg-light border border-secondary text-secondary rounded-pill px-3">
+            {{ instance_groups[group]|length }} {% if instance_groups[group]|length == 1 %}instance{% else %}instances{% endif %}
+          </span>
+        </div>
+
+        <ul class="list-unstyled mb-0">
+        {% for instance in instance_groups[group] %}
+          {% if instance.enable %}
+          <li>
+            <a href="./{{ instance.name }}" class="instance-item instance-row" data-name="{{ instance.name }}" data-enabled="true">
+              <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-cpu-fill text-success fs-5"></i>
+                <div>
+                  <div class="fw-semibold text-body instance-title">{{ instance.name }}</div>
+                  <div class="small text-secondary">Click to launch MLflow dashboard</div>
+                </div>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge badge-enabled rounded-pill px-2.5 py-1">
+                  <i class="bi bi-circle-fill fs-6 me-1" style="font-size: 8px !important;"></i> Active
+                </span>
+                <i class="bi bi-chevron-right text-secondary ms-1"></i>
+              </div>
+            </a>
+          </li>
+          {% else %}
+          <li>
+            <div class="instance-item disabled instance-row" data-name="{{ instance.name }}" data-enabled="false">
+              <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-slash-circle text-secondary fs-5"></i>
+                <div>
+                  <div class="fw-semibold instance-title text-secondary">{{ instance.name }}</div>
+                  <div class="small text-secondary opacity-75">Instance currently disabled</div>
+                </div>
+              </div>
+              <span class="badge badge-disabled rounded-pill px-2.5 py-1">
+                Disabled
+              </span>
+            </div>
+          </li>
+          {% endif %}
+        {% endfor %}
+        </ul>
+      </div>
+    {% endfor %}
+    </div>
+
+    <!-- Empty Filter Results Message -->
+    <div id="no-results" class="text-center py-5 d-none">
+      <i class="bi bi-search fs-1 text-secondary mb-3 d-block"></i>
+      <h5 class="text-body">No matching MLflow instances found</h5>
+      <p class="text-secondary small">Try adjusting your filter search term.</p>
+    </div>
+
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Calculate Active vs Disabled Stat Counts
+      const activeCount = document.querySelectorAll('.instance-row[data-enabled="true"]').length;
+      const disabledCount = document.querySelectorAll('.instance-row[data-enabled="false"]').length;
+
+      document.getElementById('stat-active-instances').textContent = activeCount;
+      document.getElementById('stat-disabled-instances').textContent = disabledCount;
+
+      // Live Instant Search Filter
+      const searchInput = document.getElementById('instanceSearch');
+      const groupBlocks = document.querySelectorAll('.group-block');
+      const noResults = document.getElementById('no-results');
+
+      searchInput.addEventListener('input', function (e) {
+        const query = e.target.value.toLowerCase().trim();
+        let totalVisibleGroups = 0;
+
+        groupBlocks.forEach(group => {
+          const groupName = group.id.toLowerCase();
+          const rows = group.querySelectorAll('.instance-row');
+          let visibleRowsInGroup = 0;
+
+          rows.forEach(row => {
+            const instanceName = row.getAttribute('data-name').toLowerCase();
+            if (instanceName.includes(query) || groupName.includes(query)) {
+              row.parentElement.style.display = "";
+              visibleRowsInGroup++;
+            } else {
+              row.parentElement.style.display = "none";
+            }
+          });
+
+          if (visibleRowsInGroup > 0) {
+            group.style.display = "";
+            totalVisibleGroups++;
+          } else {
+            group.style.display = "none";
+          }
+        });
+
+        if (totalVisibleGroups === 0) {
+          noResults.classList.remove('d-none');
+        } else {
+          noResults.classList.add('d-none');
+        }
+      });
+    });
+  </script>
 </body>
 </html>
