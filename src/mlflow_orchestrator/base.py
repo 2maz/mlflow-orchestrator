@@ -48,7 +48,24 @@ class MLFlowOrchestrator:
             logger.info("conf.d dir does not exist: creating default")
             config_dir.mkdir(parents=True, exist_ok=True)
             with open(config_dir / "default.yaml", "w") as f:
-                f.write("name: default")
+                f.write(
+                        "name: default\n"
+                        "badge_prefix: project\n"
+                        "# host_name: 0.0.0.0\n"
+                        "# port: 10110\n"
+                        "# badge_color: orange\n"
+                        "# enable: True\n"
+                        "# artifacts:\n"
+                        "#   serve: True\n"
+                        "#   destination: s3://default/\n"
+                        "# environment:\n"
+                        "    # Access to the MINIO Server\n"
+                        "    # https://mlflow.org/docs/latest/tracking/artifacts-stores.html?highlight=aws_\n"
+                        "#   AWS_ACCESS_KEY_ID: <key-id>\n"
+                        "#   AWS_SECRET_ACCESS_KEY: <secret-key>\n"
+                        "#   MLFLOW_S3_ENDPOINT_URL: http://hostname:9000\n"
+                        "#   MLFLOW_S3_IGNORE_TLS: True\n"
+                )
 
         self._instances = {}
         self.config_dir = config_dir
