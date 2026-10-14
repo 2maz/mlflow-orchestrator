@@ -33,7 +33,7 @@ class SetupParser(BaseParser):
             help="Use minio running on the system given by hostname",
         )
 
-        parser.add_argument("-o", "--output-dir", default=None, help="Output directory")
+        parser.add_argument("-o", "--output-dir", required=True, default=None, help="Output directory")
 
     def execute(self, args):
         super().execute(args)
